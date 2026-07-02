@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import 'confirm_booking_screen.dart';
 import '../../widgets/status_chip.dart';
 import '../../models/truck_model.dart';
+import '../../widgets/route_map.dart';
 
 import '../../models/listing_model.dart';
 
@@ -29,6 +30,12 @@ class TruckDetailScreen extends StatelessWidget {
                   _OwnerProfileCard(ownerId: listing.ownerId),
                   const SizedBox(height: 16),
                   _TruckSpecsCard(listing: listing),
+                  const SizedBox(height: 16),
+                  RouteMap(
+                    origin: listing.origin,
+                    destination: listing.destination,
+                    height: 180,
+                  ),
                   const SizedBox(height: 16),
                   _PriceBreakdownCard(listing: listing),
                   const SizedBox(height: 32),

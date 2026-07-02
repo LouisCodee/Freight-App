@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/route_string.dart';
+import '../../widgets/route_map.dart';
 import '../../widgets/status_chip.dart';
 import '../../models/booking_model.dart';
 import '../../services/booking_service.dart';
@@ -34,7 +35,11 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  _MapPlaceholder(),
+                  RouteMap(
+                    origin: widget.booking.cargoDetails['origin'] ?? 'Dar es Salaam',
+                    destination: widget.booking.cargoDetails['destination'] ?? 'Dodoma',
+                    height: 220,
+                  ),
                   const SizedBox(height: 16),
                   _TripStatusCard(),
                   const SizedBox(height: 16),
@@ -94,49 +99,6 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
   }
 }
 
-class _MapPlaceholder extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 200,
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        boxShadow: AppTheme.cardShadow,
-        image: const DecorationImage(
-          image: NetworkImage(
-              'https://maps.googleapis.com/maps/api/staticmap?center=-6.8045,39.2831&zoom=10&size=600x300&maptype=roadmap&key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao'),
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.map_rounded, color: AppTheme.primaryColor),
-              SizedBox(width: 8),
-              Text(
-                'Map View Integration',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _TripStatusCard extends StatelessWidget {
   @override

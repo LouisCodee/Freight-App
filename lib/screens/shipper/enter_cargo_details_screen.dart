@@ -2,8 +2,63 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import 'browse_trucks_list_screen.dart';
 
-class EnterCargoDetailsScreen extends StatelessWidget {
+class EnterCargoDetailsScreen extends StatefulWidget {
   const EnterCargoDetailsScreen({super.key});
+
+  @override
+  State<EnterCargoDetailsScreen> createState() => _EnterCargoDetailsScreenState();
+}
+
+class _EnterCargoDetailsScreenState extends State<EnterCargoDetailsScreen> {
+  String? _pickupLocation;
+  String? _deliveryLocation;
+  DateTime? _pickupDate;
+  String? _cargoType;
+
+  final List<String> _tanzaniaRegions = [
+    'Dar es Salaam', 'Dodoma', 'Arusha', 'Mwanza', 'Mbeya', 
+    'Morogoro', 'Tanga', 'Kilimanjaro', 'Kigoma', 'Tabora', 
+    'Zanzibar', 'Mtwara', 'Lindi', 'Ruvuma', 'Singida'
+  ];
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _pickupDate ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppTheme.primaryColor,
+              onPrimary: Colors.white,
+              onSurface: AppTheme.onSurface,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _pickupDate) {
+      setState(() {
+        _pickupDate = picked;
+      });
+    }
+  }
+
+  void _onSearchTrucks() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BrowseTrucksListScreen(
+          searchOrigin: _pickupLocation,
+          searchDestination: _deliveryLocation,
+          searchCargoType: _cargoType,
+          searchDate: _pickupDate,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,15 +90,12 @@ class EnterCargoDetailsScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                _RouteSelectionCard(),
+                _buildRouteSelectionCard(),
                 const SizedBox(height: 16),
-                _CargoSpecCard(),
+                _buildCargoSpecCard(),
                 const SizedBox(height: 32),
                 ElevatedButton.icon(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const BrowseTrucksListScreen()),
-                  ),
+                  onPressed: _onSearchTrucks,
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size.fromHeight(52),
                     backgroundColor: AppTheme.primaryColor,
@@ -70,11 +122,8 @@ class EnterCargoDetailsScreen extends StatelessWidget {
       ),
     );
   }
-}
 
-class _RouteSelectionCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildRouteSelectionCard() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -95,53 +144,66 @@ class _RouteSelectionCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          TextFormField(
+          DropdownButtonFormField<String>(
             decoration: InputDecoration(
               labelText: 'Pickup Location',
-              prefixIcon:
-                  const Icon(Icons.circle_outlined, color: AppTheme.primaryColor),
+              prefixIcon: const Icon(Icons.circle_outlined, color: AppTheme.primaryColor),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 borderSide: const BorderSide(color: AppTheme.outlineVariant),
               ),
             ),
+            value: _pickupLocation,
+            items: _tanzaniaRegions.map((region) {
+              return DropdownMenuItem(value: region, child: Text(region));
+            }).toList(),
+            onChanged: (val) => setState(() => _pickupLocation = val),
           ),
           const SizedBox(height: 16),
-          TextFormField(
+          DropdownButtonFormField<String>(
             decoration: InputDecoration(
               labelText: 'Delivery Location',
-              prefixIcon: const Icon(Icons.location_on_rounded,
-                  color: AppTheme.secondaryColor),
+              prefixIcon: const Icon(Icons.location_on_rounded, color: AppTheme.secondaryColor),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 borderSide: const BorderSide(color: AppTheme.outlineVariant),
               ),
             ),
+            value: _deliveryLocation,
+            items: _tanzaniaRegions.map((region) {
+              return DropdownMenuItem(value: region, child: Text(region));
+            }).toList(),
+            onChanged: (val) => setState(() => _deliveryLocation = val),
           ),
           const SizedBox(height: 16),
-          TextFormField(
-            decoration: InputDecoration(
-              labelText: 'Pickup Date',
-              prefixIcon: const Icon(Icons.calendar_month_rounded,
-                  color: AppTheme.onSurfaceVariant),
-              suffixIcon: const Icon(Icons.arrow_drop_down_rounded,
-                  color: AppTheme.onSurfaceVariant),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                borderSide: const BorderSide(color: AppTheme.outlineVariant),
+          InkWell(
+            onTap: () => _selectDate(context),
+            child: IgnorePointer(
+              child: TextFormField(
+                key: ValueKey(_pickupDate),
+                initialValue: _pickupDate != null 
+                    ? "\${_pickupDate!.day}/\${_pickupDate!.month}/\${_pickupDate!.year}"
+                    : null,
+                decoration: InputDecoration(
+                  labelText: 'Pickup Date',
+                  hintText: 'Select Date',
+                  prefixIcon: const Icon(Icons.calendar_month_rounded, color: AppTheme.onSurfaceVariant),
+                  suffixIcon: const Icon(Icons.arrow_drop_down_rounded, color: AppTheme.onSurfaceVariant),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                    borderSide: const BorderSide(color: AppTheme.outlineVariant),
+                  ),
+                ),
+                readOnly: true,
               ),
             ),
-            readOnly: true,
           ),
         ],
       ),
     );
   }
-}
 
-class _CargoSpecCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildCargoSpecCard() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -164,19 +226,19 @@ class _CargoSpecCard extends StatelessWidget {
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             decoration: InputDecoration(
-              labelText: 'Cargo Type',
-              prefixIcon: const Icon(Icons.inventory_2_rounded,
-                  color: AppTheme.onSurfaceVariant),
+              labelText: 'Cargo Type (Optional)',
+              prefixIcon: const Icon(Icons.inventory_2_rounded, color: AppTheme.onSurfaceVariant),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               ),
             ),
+            value: _cargoType,
             items: const [
               DropdownMenuItem(value: 'General', child: Text('General Merchandise')),
               DropdownMenuItem(value: 'Perishable', child: Text('Perishable Goods')),
               DropdownMenuItem(value: 'Construction', child: Text('Construction Material')),
             ],
-            onChanged: (val) {},
+            onChanged: (val) => setState(() => _cargoType = val),
           ),
           const SizedBox(height: 16),
           Row(
@@ -185,9 +247,8 @@ class _CargoSpecCard extends StatelessWidget {
                 child: TextFormField(
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: 'Weight',
-                    prefixIcon: const Icon(Icons.scale_rounded,
-                        color: AppTheme.onSurfaceVariant),
+                    labelText: 'Weight (Optional)',
+                    prefixIcon: const Icon(Icons.scale_rounded, color: AppTheme.onSurfaceVariant),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     ),
@@ -218,5 +279,3 @@ class _CargoSpecCard extends StatelessWidget {
     );
   }
 }
-
-

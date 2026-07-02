@@ -5,7 +5,21 @@ import 'create_listing_step_3_screen.dart';
 
 class CreateListingStep2Screen extends StatefulWidget {
   final String? truckId;
-  const CreateListingStep2Screen({super.key, this.truckId});
+  final String? truckPlate;
+  final String? truckType;
+  final double? payloadCapacity;
+  final String? homeBase;
+  final bool hasPhoto;
+
+  const CreateListingStep2Screen({
+    super.key,
+    this.truckId,
+    this.truckPlate,
+    this.truckType,
+    this.payloadCapacity,
+    this.homeBase,
+    this.hasPhoto = false,
+  });
 
   @override
   State<CreateListingStep2Screen> createState() =>
@@ -18,12 +32,19 @@ class _CreateListingStep2ScreenState extends State<CreateListingStep2Screen> {
   DateTime? _availableFrom;
   bool _isFlexible = false;
   List<String> _selectedCargoTypes = [];
+  bool _hasPhoto = false;
 
   final List<String> _regions = [
     'Dar es Salaam', 'Dodoma', 'Mwanza', 'Arusha',
     'Mbeya', 'Morogoro', 'Tanga', 'Zanzibar',
     'Iringa', 'Moshi', 'Tabora', 'Kigoma',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _hasPhoto = widget.hasPhoto;
+  }
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -65,9 +86,13 @@ class _CreateListingStep2ScreenState extends State<CreateListingStep2Screen> {
                     totalSteps: 3,
                     stepLabels: ['Vehicle', 'Route', 'Pricing'],
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 20),
 
-                  // ── Route Section ────────────────────────────────────────
+                  if (widget.truckType != null)
+                    _buildTruckInfoBanner(),
+                  if (widget.truckType != null)
+                    const SizedBox(height: 20),
+
                   _SectionLabel(label: 'Route Details'),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
@@ -105,7 +130,6 @@ class _CreateListingStep2ScreenState extends State<CreateListingStep2Screen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Availability Section ──────────────────────────────────
                   _SectionLabel(label: 'Availability'),
                   const SizedBox(height: 12),
                   GestureDetector(
@@ -156,7 +180,6 @@ class _CreateListingStep2ScreenState extends State<CreateListingStep2Screen> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  // Flexible toggle
                   GestureDetector(
                     onTap: () => setState(() => _isFlexible = !_isFlexible),
                     child: Row(
@@ -196,11 +219,21 @@ class _CreateListingStep2ScreenState extends State<CreateListingStep2Screen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Cargo Preferences ─────────────────────────────────────
+                  _SectionLabel(label: 'Cargo Preferences'),
+                  const SizedBox(height: 12),
                   _CargoTypeGrid(
                     onChanged: (selected) {
                       setState(() => _selectedCargoTypes = selected);
                     },
+                  ),
+                  const SizedBox(height: 24),
+
+                  _SectionLabel(label: 'Truck Photos'),
+                  const SizedBox(height: 12),
+                  _PhotoUploadZone(
+                    hasPhoto: _hasPhoto,
+                    onTap: () =>
+                        setState(() => _hasPhoto = !_hasPhoto),
                   ),
                   const SizedBox(height: 32),
 
@@ -218,6 +251,11 @@ class _CreateListingStep2ScreenState extends State<CreateListingStep2Screen> {
                         MaterialPageRoute(
                             builder: (_) => CreateListingStep3Screen(
                                   truckId: widget.truckId,
+                                  truckPlate: widget.truckPlate,
+                                  truckType: widget.truckType,
+                                  payloadCapacity: widget.payloadCapacity,
+                                  homeBase: widget.homeBase,
+                                  hasPhoto: _hasPhoto,
                                   origin: _selectedFrom!,
                                   destination: _selectedTo!,
                                   availableDate: _availableFrom,
@@ -229,6 +267,72 @@ class _CreateListingStep2ScreenState extends State<CreateListingStep2Screen> {
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTruckInfoBanner() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: AppTheme.primaryGradient,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+            ),
+            child: const Icon(Icons.local_shipping_rounded,
+                color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${widget.truckType} \u2014 ${widget.payloadCapacity?.toStringAsFixed(0) ?? '0'} Tons',
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    const Icon(Icons.pin_rounded, size: 11, color: Colors.white70),
+                    const SizedBox(width: 3),
+                    Text(
+                      widget.truckPlate ?? '',
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Icon(Icons.home_rounded, size: 11, color: Colors.white70),
+                    const SizedBox(width: 3),
+                    Text(
+                      widget.homeBase ?? '',
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -297,6 +401,62 @@ class _CargoTypeGridState extends State<_CargoTypeGrid> {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+class _PhotoUploadZone extends StatelessWidget {
+  const _PhotoUploadZone({required this.hasPhoto, required this.onTap});
+  final bool hasPhoto;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        height: 100,
+        decoration: BoxDecoration(
+          color: hasPhoto
+              ? AppTheme.statusGreenContainer
+              : AppTheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          border: Border.all(
+            color: hasPhoto ? AppTheme.statusGreen : AppTheme.outlineVariant,
+            width: 1.5,
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                hasPhoto
+                    ? Icons.check_circle_rounded
+                    : Icons.add_photo_alternate_rounded,
+                size: 28,
+                color: hasPhoto
+                    ? AppTheme.statusGreen
+                    : AppTheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                hasPhoto ? 'Photo Added \u2713' : 'Tap to Upload Truck Photo',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: hasPhoto
+                      ? AppTheme.statusGreen
+                      : AppTheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

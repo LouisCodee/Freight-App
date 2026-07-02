@@ -15,6 +15,19 @@ String _formatCurrency(double amount) {
   return 'TZS ${amount.toStringAsFixed(0)}';
 }
 
+String _pricingLabel(String model) {
+  switch (model) {
+    case 'per_ton':
+      return 'Ton';
+    case 'per_trip':
+      return 'Trip';
+    case 'per_day':
+      return 'Day';
+    default:
+      return 'Ton';
+  }
+}
+
 class ListingPublishedScreen extends StatefulWidget {
   const ListingPublishedScreen({super.key, required this.listing});
   final ListingModel listing;
@@ -111,7 +124,7 @@ class _ListingPublishedScreenState extends State<ListingPublishedScreen>
                     final truck = snapshot.data;
                     final truckTitle = truck != null ? '${truck.truckType} — ${truck.payloadCapacity} Tons' : 'Loading...';
                     final routeText = truck != null ? '${truck.licensePlate} · ${widget.listing.origin} → ${widget.listing.destination}' : '${widget.listing.origin} → ${widget.listing.destination}';
-                    final rateText = '${_formatCurrency(widget.listing.rate)}/${widget.listing.pricingModel == 'Per Ton' ? 'Ton' : 'Trip'}';
+                    final rateText = '${_formatCurrency(widget.listing.rate)}/${_pricingLabel(widget.listing.pricingModel)}';
 
                     return Container(
                       padding: const EdgeInsets.all(16),

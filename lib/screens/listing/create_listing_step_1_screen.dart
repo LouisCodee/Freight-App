@@ -48,17 +48,13 @@ class _CreateListingStep1ScreenState extends State<CreateListingStep1Screen> {
         backgroundColor: AppTheme.backgroundColor,
         body: Column(
           children: [
-            // ── Custom header ─────────────────────────────────────────────
             _ListingHeader(onBack: () => Navigator.of(context).pop()),
-
-            // ── Scrollable form ───────────────────────────────────────────
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Step indicator
                     const StepIndicator(
                       currentStep: 1,
                       totalSteps: 3,
@@ -66,7 +62,6 @@ class _CreateListingStep1ScreenState extends State<CreateListingStep1Screen> {
                     ),
                     const SizedBox(height: 28),
 
-                    // ── Section: Vehicle Identity ─────────────────────────
                     _SectionLabel(label: 'Vehicle Identity'),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -79,7 +74,6 @@ class _CreateListingStep1ScreenState extends State<CreateListingStep1Screen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    // Truck type dropdown
                     DropdownButtonFormField<String>(
                       // ignore: deprecated_member_use
                       value: _selectedTruckType,
@@ -109,7 +103,6 @@ class _CreateListingStep1ScreenState extends State<CreateListingStep1Screen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // ── Section: Truck Photos ─────────────────────────────
                     _SectionLabel(label: 'Truck Photos'),
                     const SizedBox(height: 12),
                     _PhotoUploadZone(
@@ -129,7 +122,6 @@ class _CreateListingStep1ScreenState extends State<CreateListingStep1Screen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // ── Section: Service Area ─────────────────────────────
                     _SectionLabel(label: 'Service Area'),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -151,7 +143,6 @@ class _CreateListingStep1ScreenState extends State<CreateListingStep1Screen> {
                     ),
                     const SizedBox(height: 32),
 
-                    // ── CTA ───────────────────────────────────────────────
                     _isLoading
                         ? const Center(child: CircularProgressIndicator())
                         : _GradientButton(
@@ -173,7 +164,14 @@ class _CreateListingStep1ScreenState extends State<CreateListingStep1Screen> {
                                 if (truck != null) {
                                   Navigator.of(context).push(
                                     MaterialPageRoute(
-                                        builder: (_) => CreateListingStep2Screen(truckId: truck.id)),
+                                        builder: (_) => CreateListingStep2Screen(
+                                              truckId: truck.id,
+                                              truckPlate: truck.licensePlate,
+                                              truckType: truck.truckType,
+                                              payloadCapacity: truck.payloadCapacity,
+                                              homeBase: truck.homeBase,
+                                              hasPhoto: _hasPhotoAdded,
+                                            )),
                                   );
                                 }
                               } catch (e) {
@@ -250,7 +248,6 @@ class _ListingHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              // Save draft button
               TextButton(
                 onPressed: () {},
                 style: TextButton.styleFrom(
@@ -319,7 +316,7 @@ class _PhotoUploadZone extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                hasPhoto ? 'Photo Added ✓' : 'Tap to Upload Truck Photo',
+                hasPhoto ? 'Photo Added \u2713' : 'Tap to Upload Truck Photo',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 14,

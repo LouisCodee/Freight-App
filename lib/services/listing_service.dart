@@ -64,6 +64,38 @@ class ListingService {
         });
   }
 
+  Future<void> updateListing({
+    required String listingId,
+    required String origin,
+    required String destination,
+    DateTime? availableDate,
+    required bool isFlexible,
+    required List<String> cargoPreferences,
+    required String pricingModel,
+    required double rate,
+    required bool negotiable,
+    required String notes,
+  }) async {
+    try {
+      await _firestore.collection('listings').doc(listingId).update({
+        'origin': origin,
+        'destination': destination,
+        'availableDate': availableDate != null
+            ? Timestamp.fromDate(availableDate)
+            : null,
+        'isFlexible': isFlexible,
+        'cargoPreferences': cargoPreferences,
+        'pricingModel': pricingModel,
+        'rate': rate,
+        'negotiable': negotiable,
+        'notes': notes,
+      });
+    } catch (e) {
+      print(e.toString());
+      rethrow;
+    }
+  }
+
   /// Returns listings belonging to the current user, sorted newest-first.
   Future<List<ListingModel>> getMyListings() async {
     try {

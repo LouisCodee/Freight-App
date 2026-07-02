@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import 'onboarding/onboarding_screen.dart';
+import 'auth/login_screen.dart';
+import 'home/truck_owner_home_screen.dart';
+import 'shipper/cargo_shipper_home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -46,21 +52,67 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    _controller.forward();
-    _navigateToNext();
+    // If already logged in, navigate very quickly
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      _controller.value = 1.0; // Instantly finish animation
+      _navigateToNext(delay: 0);
+    } else {
+      _controller.forward();
+      _navigateToNext(delay: 2800);
+    }
   }
 
-  void _navigateToNext() async {
-    await Future.delayed(const Duration(milliseconds: 2800));
+  void _navigateToNext({required int delay}) async {
+    if (delay > 0) {
+      await Future.delayed(Duration(milliseconds: delay));
+    }
+    if (!mounted) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final onboardingDone = prefs.getBool('onboarding_done') ?? false;
+    final user = FirebaseAuth.instance.currentUser;
+
+    Widget destination;
+
+    if (user != null) {
+      final role = user.uid.isNotEmpty ? await _getUserRole() : null;
+      if (role == 'Shipper') {
+        destination = const CargoShipperHomeScreen();
+      } else if (role == 'Truck Owner' || role == 'TruckOwner') {
+        destination = const TruckOwnerHomeScreen();
+      } else {
+        // If role cannot be fetched (e.g. offline/timeout), fallback to login
+        destination = const LoginScreen();
+      }
+    } else if (!onboardingDone) {
+      destination = const OnboardingScreen();
+    } else {
+      destination = const LoginScreen();
+    }
+
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (_, _, _) => const OnboardingScreen(),
+        pageBuilder: (_, _, _) => destination,
         transitionsBuilder: (_, anim, _, child) =>
             FadeTransition(opacity: anim, child: child),
         transitionDuration: const Duration(milliseconds: 400),
       ),
     );
+  }
+
+  Future<String?> _getUserRole() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(FirebaseAuth.instance.currentUser!.uid)
+          .get()
+          .timeout(const Duration(seconds: 5));
+      return doc.data()?['role'] as String?;
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -77,18 +129,15 @@ class _SplashScreenState extends State<SplashScreen>
         child: SafeArea(
           child: Stack(
             children: [
-              // Background grid pattern
               Positioned.fill(
                 child: CustomPaint(painter: _GridPainter()),
               ),
-              // Main content
               Center(
                 child: AnimatedBuilder(
                   animation: _controller,
                   builder: (_, _) => Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Logo mark
                       FadeTransition(
                         opacity: _fadeAnim,
                         child: ScaleTransition(
@@ -97,7 +146,6 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                       const SizedBox(height: 32),
-                      // App name
                       FadeTransition(
                         opacity: _fadeAnim,
                         child: Transform.translate(
@@ -115,7 +163,6 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // Tagline
                       FadeTransition(
                         opacity: _fadeAnim,
                         child: Transform.translate(
@@ -136,7 +183,6 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
               ),
-              // Bottom loading bar
               Positioned(
                 left: 0,
                 right: 0,
@@ -187,7 +233,6 @@ class _LogoMark extends StatelessWidget {
     return Stack(
       alignment: Alignment.center,
       children: [
-        // Outer ring
         Container(
           width: 120,
           height: 120,
@@ -196,7 +241,6 @@ class _LogoMark extends StatelessWidget {
             color: Colors.white.withValues(alpha: 0.08),
           ),
         ),
-        // Mid ring
         Container(
           width: 96,
           height: 96,
@@ -205,7 +249,6 @@ class _LogoMark extends StatelessWidget {
             color: Colors.white.withValues(alpha: 0.12),
           ),
         ),
-        // Core
         Container(
           width: 72,
           height: 72,

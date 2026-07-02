@@ -2,13 +2,33 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/status_chip.dart';
 import 'create_listing_step_1_screen.dart';
+import 'edit_listing_screen.dart';
 import '../../models/listing_model.dart';
 import '../../models/truck_model.dart';
 import '../../services/listing_service.dart';
 import '../../services/truck_service.dart';
 
-class MyListingsScreen extends StatelessWidget {
+class MyListingsScreen extends StatefulWidget {
   const MyListingsScreen({super.key});
+
+  @override
+  State<MyListingsScreen> createState() => _MyListingsScreenState();
+}
+
+class _MyListingsScreenState extends State<MyListingsScreen> {
+  late Future<List<ListingModel>> _listingsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _listingsFuture = ListingService().getMyListings();
+  }
+
+  void _refreshListings() {
+    setState(() {
+      _listingsFuture = ListingService().getMyListings();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +40,7 @@ class MyListingsScreen extends StatelessWidget {
           SliverPadding(
             padding: const EdgeInsets.all(16),
             sliver: FutureBuilder<List<ListingModel>>(
-              future: ListingService().getMyListings(),
+              future: _listingsFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const SliverToBoxAdapter(
@@ -46,7 +66,10 @@ class MyListingsScreen extends StatelessWidget {
                     (context, index) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: _ListingCard(listing: listings[index]),
+                        child: _ListingCard(
+                          listing: listings[index],
+                          onEdit: _refreshListings,
+                        ),
                       );
                     },
                     childCount: listings.length,
@@ -113,10 +136,24 @@ String _formatCurrency(double amount) {
   return 'TZS ${amount.toStringAsFixed(0)}';
 }
 
+String _pricingLabel(String model) {
+  switch (model) {
+    case 'per_ton':
+      return 'Ton';
+    case 'per_trip':
+      return 'Trip';
+    case 'per_day':
+      return 'Day';
+    default:
+      return 'Ton';
+  }
+}
+
 class _ListingCard extends StatelessWidget {
-  const _ListingCard({required this.listing});
+  const _ListingCard({required this.listing, required this.onEdit});
 
   final ListingModel listing;
+  final VoidCallback onEdit;
 
   ChipStatus get _statusType {
     // Determine status from dates or hardcoded for now
@@ -131,7 +168,7 @@ class _ListingCard extends StatelessWidget {
         final truck = snapshot.data;
         final title = truck != null ? '${truck.truckType} — ${truck.payloadCapacity} Tons' : 'Loading Truck...';
         final route = '${listing.origin} → ${listing.destination}';
-        final price = '${_formatCurrency(listing.rate)} / ${listing.pricingModel == 'Per Ton' ? 'Ton' : 'Trip'}';
+        final price = '${_formatCurrency(listing.rate)} / ${_pricingLabel(listing.pricingModel)}';
         
         return Container(
           padding: const EdgeInsets.all(16),
@@ -228,7 +265,13 @@ class _ListingCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () {},
+                      onPressed: () async {
+                        final result = await Navigator.of(context).push<bool>(
+                          MaterialPageRoute(
+                              builder: (_) => EditListingScreen(listing: listing)),
+                        );
+                        if (result == true) onEdit();
+                      },
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: AppTheme.outlineVariant),
                         foregroundColor: AppTheme.onSurface,

@@ -7,7 +7,18 @@ import 'browse_trucks_map_screen.dart';
 import 'truck_detail_screen.dart';
 
 class BrowseTrucksListScreen extends StatelessWidget {
-  const BrowseTrucksListScreen({super.key});
+  final String? searchOrigin;
+  final String? searchDestination;
+  final String? searchCargoType;
+  final DateTime? searchDate;
+
+  const BrowseTrucksListScreen({
+    super.key,
+    this.searchOrigin,
+    this.searchDestination,
+    this.searchCargoType,
+    this.searchDate,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +57,21 @@ class BrowseTrucksListScreen extends StatelessWidget {
                   ),
                 );
               }
-              final listings = snapshot.data ?? [];
+              var listings = snapshot.data ?? [];
+              
+              // Filter based on search parameters
+              if (searchOrigin != null && searchOrigin!.isNotEmpty) {
+                listings = listings.where((l) => l.origin.toLowerCase().contains(searchOrigin!.toLowerCase())).toList();
+              }
+              if (searchDestination != null && searchDestination!.isNotEmpty) {
+                listings = listings.where((l) => l.destination.toLowerCase().contains(searchDestination!.toLowerCase())).toList();
+              }
+              // Basic cargo type filter matching if provided
+              if (searchCargoType != null && searchCargoType!.isNotEmpty) {
+                // If ListingModel has cargoPreferences, we can check if it matches
+                listings = listings.where((l) => l.cargoPreferences.isEmpty || l.cargoPreferences.any((pref) => pref.toLowerCase() == searchCargoType!.toLowerCase())).toList();
+              }
+              
               if (listings.isEmpty) {
                 return const SliverFillRemaining(
                   child: Center(
@@ -114,7 +139,11 @@ class BrowseTrucksListScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const BrowseTrucksMapScreen()),
+          MaterialPageRoute(builder: (_) => BrowseTrucksMapScreen(
+            searchOrigin: searchOrigin,
+            searchDestination: searchDestination,
+            searchCargoType: searchCargoType,
+          )),
         ),
         backgroundColor: AppTheme.primaryColor,
         icon: const Icon(Icons.map_rounded, color: Colors.white),
@@ -142,9 +171,13 @@ class BrowseTrucksListScreen extends StatelessWidget {
             size: 20, color: AppTheme.onSurface),
         onPressed: () => Navigator.of(context).pop(),
       ),
-      title: const Text(
-        'Dar es Salaam → Dodoma',
-        style: TextStyle(
+      title: Text(
+        (searchOrigin != null && searchDestination != null && searchOrigin!.isNotEmpty && searchDestination!.isNotEmpty)
+            ? '$searchOrigin → $searchDestination'
+            : (searchOrigin != null && searchOrigin!.isNotEmpty) ? '$searchOrigin → Anywhere' 
+            : (searchDestination != null && searchDestination!.isNotEmpty) ? 'Anywhere → $searchDestination'
+            : 'All Available Trucks',
+        style: const TextStyle(
           fontFamily: 'Inter',
           fontSize: 16,
           fontWeight: FontWeight.w700,

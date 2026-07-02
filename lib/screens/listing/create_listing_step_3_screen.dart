@@ -4,8 +4,35 @@ import '../../widgets/step_indicator.dart';
 import '../../services/listing_service.dart';
 import 'listing_published_screen.dart';
 
+String _pricingLabel(String model) {
+  switch (model) {
+    case 'per_ton':
+      return 'Per Ton';
+    case 'per_trip':
+      return 'Per Trip';
+    case 'per_day':
+      return 'Per Day';
+    default:
+      return 'Per Ton';
+  }
+}
+
+String _formatCurrency(double amount) {
+  if (amount >= 1000000) {
+    return 'TZS ${(amount / 1000000).toStringAsFixed(1)}M';
+  } else if (amount >= 1000) {
+    return 'TZS ${(amount / 1000).toStringAsFixed(0)}K';
+  }
+  return 'TZS ${amount.toStringAsFixed(0)}';
+}
+
 class CreateListingStep3Screen extends StatefulWidget {
   final String? truckId;
+  final String? truckPlate;
+  final String? truckType;
+  final double? payloadCapacity;
+  final String? homeBase;
+  final bool hasPhoto;
   final String? origin;
   final String? destination;
   final DateTime? availableDate;
@@ -15,6 +42,11 @@ class CreateListingStep3Screen extends StatefulWidget {
   const CreateListingStep3Screen({
     super.key,
     this.truckId,
+    this.truckPlate,
+    this.truckType,
+    this.payloadCapacity,
+    this.homeBase,
+    this.hasPhoto = false,
     this.origin,
     this.destination,
     this.availableDate,
@@ -32,13 +64,31 @@ class _CreateListingStep3ScreenState extends State<CreateListingStep3Screen> {
   bool _negotiable = true;
   final _rateController = TextEditingController();
   final _notesController = TextEditingController();
+  bool _hasPhoto = false;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _hasPhoto = widget.hasPhoto;
+  }
 
   @override
   void dispose() {
     _rateController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  String get _formattedDate {
+    if (widget.isFlexible == true) return 'Flexible';
+    if (widget.availableDate == null) return 'Not set';
+    final d = widget.availableDate!;
+    return '${d.day}/${d.month}/${d.year}';
+  }
+
+  String get _formattedCapacity {
+    return '${widget.payloadCapacity?.toStringAsFixed(0) ?? '0'} Tons';
   }
 
   @override
@@ -49,7 +99,7 @@ class _CreateListingStep3ScreenState extends State<CreateListingStep3Screen> {
         children: [
           _ListingHeader(
             onBack: () => Navigator.of(context).pop(),
-            step: 'Step 3 of 3 — Pricing',
+            step: 'Step 3 of 3 \u2014 Pricing',
           ),
           Expanded(
             child: SingleChildScrollView(
@@ -62,9 +112,13 @@ class _CreateListingStep3ScreenState extends State<CreateListingStep3Screen> {
                     totalSteps: 3,
                     stepLabels: ['Vehicle', 'Route', 'Pricing'],
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 20),
 
-                  // ── Pricing Model ─────────────────────────────────────────
+                  if (widget.truckType != null)
+                    _buildTruckInfoBanner(),
+                  if (widget.truckType != null)
+                    const SizedBox(height: 16),
+
                   _SectionLabel(label: 'Pricing Model'),
                   const SizedBox(height: 12),
                   Row(
@@ -150,7 +204,6 @@ class _CreateListingStep3ScreenState extends State<CreateListingStep3Screen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Additional Info ───────────────────────────────────────
                   _SectionLabel(label: 'Additional Information'),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -169,10 +222,18 @@ class _CreateListingStep3ScreenState extends State<CreateListingStep3Screen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Summary Preview ───────────────────────────────────────
+                  _SectionLabel(label: 'Truck Photos'),
+                  const SizedBox(height: 12),
+                  _PhotoUploadZone(
+                    hasPhoto: _hasPhoto,
+                    onTap: () =>
+                        setState(() => _hasPhoto = !_hasPhoto),
+                  ),
+                  const SizedBox(height: 24),
+
                   _SectionLabel(label: 'Listing Summary'),
                   const SizedBox(height: 12),
-                  _SummaryCard(),
+                  _buildSummaryCard(),
                   const SizedBox(height: 32),
 
                   _isLoading
@@ -217,6 +278,112 @@ class _CreateListingStep3ScreenState extends State<CreateListingStep3Screen> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTruckInfoBanner() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: AppTheme.primaryGradient,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+            ),
+            child: const Icon(Icons.local_shipping_rounded,
+                color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${widget.truckType} \u2014 ${
+                    widget.payloadCapacity?.toStringAsFixed(0) ?? '0'
+                  } Tons',
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    const Icon(Icons.pin_rounded, size: 11, color: Colors.white70),
+                    const SizedBox(width: 3),
+                    Text(
+                      widget.truckPlate ?? '',
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Icon(Icons.route_rounded, size: 11, color: Colors.white70),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${widget.origin ?? ''} \u2192 ${widget.destination ?? ''}',
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard() {
+    final route = '${widget.origin ?? '-'} \u2192 ${widget.destination ?? '-'}';
+    final rateAmount = double.tryParse(_rateController.text) ?? 0.0;
+    final rateDisplay = rateAmount > 0
+        ? '${_formatCurrency(rateAmount)} / ${_pricingLabel(_pricingModel)}'
+        : 'Not set';
+    final cargoDisplay = (widget.cargoPreferences ?? []).isEmpty
+        ? 'None selected'
+        : (widget.cargoPreferences ?? []).join(', ');
+    final negotiableDisplay = _negotiable ? 'Yes' : 'No';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Column(
+        children: [
+          _SummaryRow(label: 'Truck', value: '${widget.truckType ?? '-'} \u2014 $_formattedCapacity'),
+          const Divider(height: 20),
+          _SummaryRow(label: 'Plate', value: widget.truckPlate ?? '-'),
+          const Divider(height: 20),
+          _SummaryRow(label: 'Route', value: route),
+          const Divider(height: 20),
+          _SummaryRow(label: 'Cargo', value: cargoDisplay),
+          const Divider(height: 20),
+          _SummaryRow(label: 'Available', value: _formattedDate),
+          const Divider(height: 20),
+          _SummaryRow(label: 'Rate', value: rateDisplay),
+          const Divider(height: 20),
+          _SummaryRow(label: 'Negotiable', value: negotiableDisplay),
         ],
       ),
     );
@@ -271,33 +438,6 @@ class _PricingModelChip extends StatelessWidget {
   }
 }
 
-class _SummaryCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        boxShadow: AppTheme.cardShadow,
-      ),
-      child: Column(
-        children: [
-          _SummaryRow(label: 'Truck Type', value: 'Flatbed'),
-          const Divider(height: 20),
-          _SummaryRow(label: 'Route', value: 'DSM → Dodoma'),
-          const Divider(height: 20),
-          _SummaryRow(label: 'Payload', value: '20 Tons'),
-          const Divider(height: 20),
-          _SummaryRow(label: 'Rate', value: 'TZS 50,000 / Ton'),
-          const Divider(height: 20),
-          _SummaryRow(label: 'Available', value: 'From May 10, 2026'),
-        ],
-      ),
-    );
-  }
-}
-
 class _SummaryRow extends StatelessWidget {
   const _SummaryRow({required this.label, required this.value});
   final String label;
@@ -306,6 +446,7 @@ class _SummaryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label,
@@ -314,14 +455,73 @@ class _SummaryRow extends StatelessWidget {
               fontSize: 13,
               color: AppTheme.onSurfaceVariant,
             )),
-        Text(value,
-            style: const TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.onSurface,
-            )),
+        Flexible(
+          child: Text(value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.onSurface,
+              )),
+        ),
       ],
+    );
+  }
+}
+
+class _PhotoUploadZone extends StatelessWidget {
+  const _PhotoUploadZone({required this.hasPhoto, required this.onTap});
+  final bool hasPhoto;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        height: 100,
+        decoration: BoxDecoration(
+          color: hasPhoto
+              ? AppTheme.statusGreenContainer
+              : AppTheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          border: Border.all(
+            color: hasPhoto ? AppTheme.statusGreen : AppTheme.outlineVariant,
+            width: 1.5,
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                hasPhoto
+                    ? Icons.check_circle_rounded
+                    : Icons.add_photo_alternate_rounded,
+                size: 28,
+                color: hasPhoto
+                    ? AppTheme.statusGreen
+                    : AppTheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                hasPhoto ? 'Photo Added \u2713' : 'Tap to Upload Truck Photo',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: hasPhoto
+                      ? AppTheme.statusGreen
+                      : AppTheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

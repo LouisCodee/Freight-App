@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/route_map.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/route_string.dart';
@@ -24,7 +25,16 @@ class ActiveBookingTrackerScreen extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  _MapPlaceholder(context: context, booking: booking),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => BookingCompletedScreen(booking: booking)),
+                    ),
+                    child: RouteMap(
+                      origin: booking.cargoDetails['origin'] ?? 'Dar es Salaam',
+                      destination: booking.cargoDetails['destination'] ?? 'Dodoma',
+                      height: 240,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   _TrackerStatusCard(booking: booking),
                   const SizedBox(height: 16),
@@ -66,58 +76,7 @@ class ActiveBookingTrackerScreen extends StatelessWidget {
   }
 }
 
-class _MapPlaceholder extends StatelessWidget {
-  const _MapPlaceholder({required this.context, required this.booking});
-  final BuildContext context;
-  final BookingModel booking;
 
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => BookingCompletedScreen(booking: booking)),
-      ),
-      child: Container(
-        height: 240,
-        decoration: BoxDecoration(
-          color: AppTheme.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          boxShadow: AppTheme.cardShadow,
-          image: const DecorationImage(
-            image: NetworkImage(
-                'https://maps.googleapis.com/maps/api/staticmap?center=-6.8045,39.2831&zoom=10&size=600x400&maptype=roadmap&key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao'),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.95),
-              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.location_on_rounded, color: AppTheme.secondaryColor),
-                SizedBox(width: 8),
-                Text(
-                  'Tap Map to Complete Trip',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _TrackerStatusCard extends StatelessWidget {
   const _TrackerStatusCard({required this.booking});

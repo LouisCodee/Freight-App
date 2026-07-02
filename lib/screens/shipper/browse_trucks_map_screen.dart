@@ -1,9 +1,162 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../theme/app_theme.dart';
+import '../../services/listing_service.dart';
+import '../../services/map_route_service.dart';
+import '../../models/listing_model.dart';
+import '../../models/truck_model.dart';
 import 'browse_trucks_list_screen.dart';
+import 'truck_detail_screen.dart';
 
-class BrowseTrucksMapScreen extends StatelessWidget {
-  const BrowseTrucksMapScreen({super.key});
+class BrowseTrucksMapScreen extends StatefulWidget {
+  final String? searchOrigin;
+  final String? searchDestination;
+  final String? searchCargoType;
+
+  const BrowseTrucksMapScreen({
+    super.key,
+    this.searchOrigin,
+    this.searchDestination,
+    this.searchCargoType,
+  });
+
+  @override
+  State<BrowseTrucksMapScreen> createState() => _BrowseTrucksMapScreenState();
+}
+
+class _BrowseTrucksMapScreenState extends State<BrowseTrucksMapScreen> {
+  GoogleMapController? _mapController;
+  final MapRouteService _routeService = MapRouteService();
+  
+  List<ListingModel> _listings = [];
+  Map<String, LatLng> _truckLocations = {}; // Listing ID -> Location
+  
+  ListingModel? _selectedListing;
+  TruckModel? _selectedTruck;
+  
+  Set<Marker> _markers = {};
+  Set<Polyline> _polylines = {};
+  bool _isLoadingRoute = false;
+
+  final LatLng _defaultCenter = const LatLng(-6.8045, 39.2831);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadListings();
+  }
+
+  Future<void> _loadListings() async {
+    var listings = await ListingService().getAvailableListings().first;
+    if (!mounted) return;
+
+    if (widget.searchOrigin != null && widget.searchOrigin!.isNotEmpty) {
+      listings = listings.where((l) => l.origin.toLowerCase().contains(widget.searchOrigin!.toLowerCase())).toList();
+    }
+    if (widget.searchDestination != null && widget.searchDestination!.isNotEmpty) {
+      listings = listings.where((l) => l.destination.toLowerCase().contains(widget.searchDestination!.toLowerCase())).toList();
+    }
+    if (widget.searchCargoType != null && widget.searchCargoType!.isNotEmpty) {
+      listings = listings.where((l) => l.cargoPreferences.isEmpty || l.cargoPreferences.any((pref) => pref.toLowerCase() == widget.searchCargoType!.toLowerCase())).toList();
+    }
+
+    final random = Random(42); // fixed seed for consistent dummy locations
+    final Map<String, LatLng> locations = {};
+    
+    for (var listing in listings) {
+      // Generate dummy location near Dar es Salaam for demo purposes
+      final lat = -6.8045 + (random.nextDouble() - 0.5) * 0.08;
+      final lng = 39.2831 + (random.nextDouble() - 0.5) * 0.08;
+      locations[listing.id] = LatLng(lat, lng);
+    }
+
+    setState(() {
+      _listings = listings;
+      _truckLocations = locations;
+    });
+    
+    _updateMarkers();
+  }
+
+  void _updateMarkers() {
+    final Set<Marker> markers = {};
+    
+    for (var listing in _listings) {
+      final loc = _truckLocations[listing.id];
+      if (loc == null) continue;
+      
+      final isSelected = _selectedListing?.id == listing.id;
+      
+      markers.add(
+        Marker(
+          markerId: MarkerId(listing.id),
+          position: loc,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            isSelected ? BitmapDescriptor.hueRed : BitmapDescriptor.hueAzure,
+          ),
+          onTap: () => _onListingSelected(listing),
+        ),
+      );
+    }
+    
+    setState(() {
+      _markers = markers;
+    });
+  }
+
+  Future<void> _onListingSelected(ListingModel listing) async {
+    setState(() {
+      _selectedListing = listing;
+      _selectedTruck = null;
+      _isLoadingRoute = true;
+      _polylines.clear();
+    });
+    _updateMarkers();
+
+    // Fetch truck details
+    final truckDoc = await FirebaseFirestore.instance.collection('trucks').doc(listing.truckId).get();
+    if (mounted && truckDoc.exists) {
+      setState(() {
+        _selectedTruck = TruckModel.fromMap(truckDoc.data()!, truckDoc.id);
+      });
+    }
+
+    // Fetch route points
+    final points = await _routeService.getRoutePoints(listing.origin, listing.destination);
+    
+    if (mounted && _selectedListing?.id == listing.id) {
+      setState(() {
+        _isLoadingRoute = false;
+        if (points.isNotEmpty) {
+          _polylines = {
+            Polyline(
+              polylineId: PolylineId('route_${listing.id}'),
+              points: points,
+              color: AppTheme.primaryColor,
+              width: 5,
+              startCap: Cap.roundCap,
+              endCap: Cap.roundCap,
+            )
+          };
+        }
+      });
+      
+      // Fit bounds to route + truck location
+      if (_mapController != null && points.isNotEmpty) {
+        final truckLoc = _truckLocations[listing.id];
+        if (truckLoc != null) points.add(truckLoc);
+        
+        final bounds = MapRouteService.boundsFromPoints(points);
+        _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 60));
+      }
+    }
+  }
+
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -11,13 +164,57 @@ class BrowseTrucksMapScreen extends StatelessWidget {
       backgroundColor: AppTheme.surfaceContainerLow,
       body: Stack(
         children: [
-          // Dummy map background
+          // Google Map Background
           Positioned.fill(
-            child: Image.network(
-              'https://maps.googleapis.com/maps/api/staticmap?center=-6.8045,39.2831&zoom=12&size=800x800&maptype=roadmap&key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao',
-              fit: BoxFit.cover,
+            child: GoogleMap(
+              onMapCreated: _onMapCreated,
+              initialCameraPosition: CameraPosition(
+                target: _defaultCenter,
+                zoom: 12.0,
+              ),
+              markers: _markers,
+              polylines: _polylines,
+              myLocationEnabled: true,
+              myLocationButtonEnabled: false,
+              zoomControlsEnabled: false,
+              mapToolbarEnabled: false,
+              onTap: (_) {
+                // Deselect when tapping on empty map
+                if (_selectedListing != null) {
+                  setState(() {
+                    _selectedListing = null;
+                    _selectedTruck = null;
+                    _polylines.clear();
+                  });
+                  _updateMarkers();
+                }
+              },
             ),
           ),
+          
+          // Route Loading Indicator
+          if (_isLoadingRoute)
+            const Positioned(
+              top: 100,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Card(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                        SizedBox(width: 12),
+                        Text('Loading truck route...', style: TextStyle(fontFamily: 'Inter', fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
           // Custom App Bar
           Positioned(
             top: 0,
@@ -36,11 +233,15 @@ class BrowseTrucksMapScreen extends StatelessWidget {
                             size: 20, color: AppTheme.onSurface),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Dar es Salaam → Dodoma',
+                          (widget.searchOrigin != null && widget.searchDestination != null && widget.searchOrigin!.isNotEmpty && widget.searchDestination!.isNotEmpty)
+                              ? '${widget.searchOrigin} → ${widget.searchDestination}'
+                              : (widget.searchOrigin != null && widget.searchOrigin!.isNotEmpty) ? '${widget.searchOrigin} → Anywhere' 
+                              : (widget.searchDestination != null && widget.searchDestination!.isNotEmpty) ? 'Anywhere → ${widget.searchDestination}'
+                              : 'All Available Trucks',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -59,34 +260,27 @@ class BrowseTrucksMapScreen extends StatelessWidget {
               ),
             ),
           ),
-          // Map Marker Overlays (Dummy)
-          Positioned(
-            top: 300,
-            left: 150,
-            child: _MapPin(price: '850K', isSelected: true),
-          ),
-          Positioned(
-            top: 450,
-            left: 200,
-            child: _MapPin(price: '1.2M', isSelected: false),
-          ),
-          Positioned(
-            top: 250,
-            left: 280,
-            child: _MapPin(price: '650K', isSelected: false),
-          ),
+
           // Selected Truck Details Bottom Sheet overlay
-          Positioned(
-            bottom: 80,
-            left: 16,
-            right: 16,
-            child: _SelectedTruckPreview(),
-          ),
+          if (_selectedListing != null)
+            Positioned(
+              bottom: 80,
+              left: 16,
+              right: 16,
+              child: _SelectedTruckPreview(
+                listing: _selectedListing!,
+                truck: _selectedTruck,
+              ),
+            ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const BrowseTrucksListScreen()),
+          MaterialPageRoute(builder: (_) => BrowseTrucksListScreen(
+            searchOrigin: widget.searchOrigin,
+            searchDestination: widget.searchDestination,
+            searchCargoType: widget.searchCargoType,
+          )),
         ),
         backgroundColor: AppTheme.onSurface,
         icon: const Icon(Icons.list_rounded, color: Colors.white),
@@ -104,48 +298,17 @@ class BrowseTrucksMapScreen extends StatelessWidget {
   }
 }
 
-class _MapPin extends StatelessWidget {
-  const _MapPin({required this.price, required this.isSelected});
-  final String price;
-  final bool isSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: isSelected ? AppTheme.primaryColor : Colors.white,
-        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          )
-        ],
-        border: Border.all(
-          color: isSelected ? AppTheme.primaryColor : AppTheme.outlineVariant,
-        ),
-      ),
-      child: Text(
-        price,
-        style: TextStyle(
-          fontFamily: 'Inter',
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          color: isSelected ? Colors.white : AppTheme.onSurface,
-        ),
-      ),
-    );
-  }
-}
-
 class _SelectedTruckPreview extends StatelessWidget {
+  final ListingModel listing;
+  final TruckModel? truck;
+  
+  const _SelectedTruckPreview({required this.listing, this.truck});
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const BrowseTrucksListScreen()),
+        MaterialPageRoute(builder: (_) => TruckDetailScreen(listing: listing)),
       ),
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -167,32 +330,32 @@ class _SelectedTruckPreview extends StatelessWidget {
                   color: AppTheme.primaryColor, size: 28),
             ),
             const SizedBox(width: 16),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Scania R450',
-                    style: TextStyle(
+                    truck?.truckType ?? 'Loading...',
+                    style: const TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.onSurface,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
-                    'John Mwangi • Flatbed',
-                    style: TextStyle(
+                    '${listing.origin} → ${listing.destination}',
+                    style: const TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 13,
                       color: AppTheme.onSurfaceVariant,
                     ),
                   ),
-                  SizedBox(height: 6),
+                  const SizedBox(height: 6),
                   Text(
-                    'TZS 850,000',
-                    style: TextStyle(
+                    'TZS ${listing.rate}',
+                    style: const TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
