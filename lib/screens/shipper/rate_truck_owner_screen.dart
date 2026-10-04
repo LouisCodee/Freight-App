@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../theme/app_theme.dart';
 import '../../models/booking_model.dart';
-import '../../models/truck_model.dart';
 import '../../services/truck_service.dart';
 
 class RateTruckOwnerScreen extends StatefulWidget {

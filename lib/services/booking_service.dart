@@ -85,4 +85,19 @@ class BookingService {
           return items;
         });
   }
+
+  /// Bookings for a specific listing, sorted newest-first client-side.
+  Stream<List<BookingModel>> getBookingsForListing(String listingId) {
+    return _firestore
+        .collection('bookings')
+        .where('listingId', isEqualTo: listingId)
+        .snapshots()
+        .map((snapshot) {
+          final items = snapshot.docs
+              .map((doc) => BookingModel.fromMap(doc.data(), doc.id))
+              .toList();
+          items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return items;
+        });
+  }
 }

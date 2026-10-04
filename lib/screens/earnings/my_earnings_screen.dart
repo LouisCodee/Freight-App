@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/status_chip.dart';
+import '../../services/earnings_service.dart';
+import '../../models/transaction_model.dart';
 
 class MyEarningsScreen extends StatelessWidget {
   const MyEarningsScreen({super.key});
@@ -98,15 +100,26 @@ class _TotalEarningsCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'TZS 2,450,000',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 32,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              letterSpacing: -0.5,
-            ),
+          StreamBuilder<double>(
+            stream: EarningsService().getTotalBalance(),
+            builder: (context, snapshot) {
+              final balance = snapshot.data ?? 0.0;
+              // Formatting simple since intl isn't added
+              final formattedBalance = balance.toStringAsFixed(0).replaceAllMapped(
+                RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+                (Match m) => '${m[1]},',
+              );
+              return Text(
+                'TZS $formattedBalance',
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: -0.5,
+                ),
+              );
+            }
           ),
           const SizedBox(height: 24),
           Row(
@@ -142,6 +155,11 @@ class _TotalEarningsCard extends StatelessWidget {
 }
 
 class _TransactionList extends StatelessWidget {
+  String _formatDate(DateTime date) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[date.month - 1]} ${date.day.toString().padLeft(2, '0')}, ${date.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -150,40 +168,68 @@ class _TransactionList extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         boxShadow: AppTheme.cardShadow,
       ),
-      child: Column(
-        children: [
-          _TransactionItem(
-            title: 'Trip #FR-8921 Completion',
-            date: 'Oct 15, 2026',
-            amount: '+ TZS 850,000',
-            isPositive: true,
-            status: ChipStatus.success,
-          ),
-          const Divider(height: 1, color: AppTheme.outlineVariant),
-          _TransactionItem(
-            title: 'Withdrawal to Bank (...4567)',
-            date: 'Oct 10, 2026',
-            amount: '- TZS 1,200,000',
-            isPositive: false,
-            status: ChipStatus.info,
-          ),
-          const Divider(height: 1, color: AppTheme.outlineVariant),
-          _TransactionItem(
-            title: 'Platform Fee Deduction',
-            date: 'Oct 15, 2026',
-            amount: '- TZS 42,500',
-            isPositive: false,
-            status: ChipStatus.warning,
-          ),
-          const Divider(height: 1, color: AppTheme.outlineVariant),
-          _TransactionItem(
-            title: 'Trip #FR-8890 Completion',
-            date: 'Oct 02, 2026',
-            amount: '+ TZS 600,000',
-            isPositive: true,
-            status: ChipStatus.success,
-          ),
-        ],
+      child: StreamBuilder<List<TransactionModel>>(
+        stream: EarningsService().getTransactions(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Padding(
+              padding: EdgeInsets.all(32.0),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          final transactions = snapshot.data ?? [];
+          if (transactions.isEmpty) {
+            return const Padding(
+              padding: EdgeInsets.all(32.0),
+              child: Center(
+                child: Text(
+                  'No transactions yet.',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    color: AppTheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            );
+          }
+
+          return Column(
+            children: transactions.asMap().entries.map((entry) {
+              final index = entry.key;
+              final tx = entry.value;
+              
+              final formattedAmount = tx.amount.toStringAsFixed(0).replaceAllMapped(
+                RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+                (Match m) => '${m[1]},',
+              );
+              final sign = tx.isPositive ? '+' : '-';
+
+              ChipStatus chipStatus;
+              switch (tx.status) {
+                case TransactionStatus.pending: chipStatus = ChipStatus.warning; break;
+                case TransactionStatus.failed: chipStatus = ChipStatus.error; break;
+                case TransactionStatus.completed: 
+                  chipStatus = tx.isPositive ? ChipStatus.success : ChipStatus.info; 
+                  break;
+              }
+
+              return Column(
+                children: [
+                  _TransactionItem(
+                    title: tx.title,
+                    date: _formatDate(tx.date),
+                    amount: '$sign TZS $formattedAmount',
+                    isPositive: tx.isPositive,
+                    status: chipStatus,
+                    statusLabel: tx.status.toString().split('.').last,
+                  ),
+                  if (index < transactions.length - 1)
+                    const Divider(height: 1, color: AppTheme.outlineVariant),
+                ],
+              );
+            }).toList(),
+          );
+        }
       ),
     );
   }
@@ -196,6 +242,7 @@ class _TransactionItem extends StatelessWidget {
     required this.amount,
     required this.isPositive,
     required this.status,
+    required this.statusLabel,
   });
 
   final String title;
@@ -203,6 +250,7 @@ class _TransactionItem extends StatelessWidget {
   final String amount;
   final bool isPositive;
   final ChipStatus status;
+  final String statusLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -266,7 +314,7 @@ class _TransactionItem extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               StatusChip(
-                label: isPositive ? 'Completed' : 'Processed',
+                label: statusLabel[0].toUpperCase() + statusLabel.substring(1),
                 status: status,
               ),
             ],

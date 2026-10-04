@@ -167,8 +167,9 @@ class _TruckDriverCard extends StatelessWidget {
         }
 
         final driverDoc = snapshot.data![0];
-        final driverName = driverDoc.exists ? driverDoc['name'] : 'Unknown Driver';
-        final driverPhone = driverDoc.exists ? driverDoc['phoneNumber'] : '';
+        final data = driverDoc.data() as Map<String, dynamic>?;
+        final driverName = data?['name'] ?? 'Unknown Driver';
+        final driverPhone = data?['phone'] ?? '';
 
         return Container(
           padding: const EdgeInsets.all(16),

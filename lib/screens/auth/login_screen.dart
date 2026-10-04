@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/auth_header.dart';
 import 'forgot_password_screen.dart';
 import 'role_selection_screen.dart';
+import 'google_role_selection_screen.dart';
 import '../home/truck_owner_home_screen.dart';
 import '../shipper/cargo_shipper_home_screen.dart';
 import '../../services/auth_service.dart';
@@ -19,7 +20,8 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
+  bool _isEmailLoading = false;
+  bool _isGoogleLoading = false;
 
   @override
   void dispose() {
@@ -104,20 +106,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
 
-                    // ── CTA ───────────────────────────────────────────────
-                    _isLoading
+                    // ── CTA ─────────────────────────────────────────────
+                    _isEmailLoading
                         ? const Center(child: CircularProgressIndicator())
                         : _GradientButton(
                             label: 'Log In',
                             onTap: () async {
-                              setState(() => _isLoading = true);
+                              setState(() => _isEmailLoading = true);
                               try {
                                 final user = await AuthService().loginUser(
                                   email: _emailController.text.trim(),
                                   password: _passwordController.text,
                                 );
                                 if (!context.mounted) return;
-                                setState(() => _isLoading = false);
+                                setState(() => _isEmailLoading = false);
                                 if (user != null) {
                                   if (user.role == 'Shipper') {
                                     Navigator.of(context).pushReplacement(
@@ -133,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 }
                               } catch (e) {
                                 if (!context.mounted) return;
-                                setState(() => _isLoading = false);
+                                setState(() => _isEmailLoading = false);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text(e.toString())),
                                 );
@@ -147,10 +149,58 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 20),
 
                     // ── Social login ──────────────────────────────────────
-                    _SocialButton(
+                    _isGoogleLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _SocialButton(
                       label: 'Continue with Google',
                       icon: Icons.g_mobiledata_rounded,
-                      onTap: () {},
+                      onTap: () async {
+                        setState(() => _isGoogleLoading = true);
+                        try {
+                          final result =
+                              await AuthService().signInWithGoogle();
+                          if (!context.mounted) return;
+                          setState(() => _isGoogleLoading = false);
+                          if (result == null) return; // user cancelled
+
+                          if (result.isNewUser) {
+                            // First-time Google user — collect role.
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                builder: (_) => GoogleRoleSelectionScreen(
+                                  firebaseUid: result.firebaseUid,
+                                  displayName: result.displayName,
+                                  email: result.email,
+                                ),
+                              ),
+                            );
+                          } else {
+                            // Returning user — route by saved role.
+                            final role = result.user?.role;
+                            if (role == 'Shipper') {
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const CargoShipperHomeScreen(),
+                                ),
+                              );
+                            } else {
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const TruckOwnerHomeScreen(),
+                                ),
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          setState(() => _isGoogleLoading = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(e.toString())),
+                          );
+                        }
+                      },
                     ),
                     const SizedBox(height: 32),
 

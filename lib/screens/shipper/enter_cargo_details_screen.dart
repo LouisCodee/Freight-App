@@ -14,6 +14,7 @@ class _EnterCargoDetailsScreenState extends State<EnterCargoDetailsScreen> {
   String? _deliveryLocation;
   DateTime? _pickupDate;
   String? _cargoType;
+  String _weightUnit = 'Tons';
 
   final List<String> _tanzaniaRegions = [
     'Dar es Salaam', 'Dodoma', 'Arusha', 'Mwanza', 'Mbeya', 
@@ -264,12 +265,12 @@ class _EnterCargoDetailsScreenState extends State<EnterCargoDetailsScreen> {
                       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     ),
                   ),
-                  initialValue: 'Tons',
+                  value: _weightUnit,
                   items: const [
                     DropdownMenuItem(value: 'Tons', child: Text('Tons')),
                     DropdownMenuItem(value: 'Kg', child: Text('Kilograms')),
                   ],
-                  onChanged: (val) {},
+                  onChanged: (val) => setState(() => _weightUnit = val ?? 'Tons'),
                 ),
               ),
             ],

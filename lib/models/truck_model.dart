@@ -8,6 +8,7 @@ class TruckModel {
   final double payloadCapacity;
   final String homeBase;
   final String? preferredRoutes;
+  final String? photoUrl;
   final DateTime createdAt;
 
   TruckModel({
@@ -18,6 +19,7 @@ class TruckModel {
     required this.payloadCapacity,
     required this.homeBase,
     this.preferredRoutes,
+    this.photoUrl,
     required this.createdAt,
   });
 
@@ -30,6 +32,7 @@ class TruckModel {
       'payloadCapacity': payloadCapacity,
       'homeBase': homeBase,
       'preferredRoutes': preferredRoutes,
+      'photoUrl': photoUrl,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
@@ -50,6 +53,7 @@ class TruckModel {
       payloadCapacity: (map['payloadCapacity'] ?? 0).toDouble(),
       homeBase: map['homeBase'] ?? '',
       preferredRoutes: map['preferredRoutes'],
+      photoUrl: map['photoUrl'],
       createdAt: _parseDate(map['createdAt']),
     );
   }

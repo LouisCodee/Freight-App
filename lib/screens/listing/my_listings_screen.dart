@@ -7,6 +7,7 @@ import '../../models/listing_model.dart';
 import '../../models/truck_model.dart';
 import '../../services/listing_service.dart';
 import '../../services/truck_service.dart';
+import 'listing_requests_screen.dart';
 
 class MyListingsScreen extends StatefulWidget {
   const MyListingsScreen({super.key});
@@ -282,7 +283,13 @@ class _ListingCard extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ListingRequestsScreen(listing: listing),
+                          ),
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
                         foregroundColor: Colors.white,

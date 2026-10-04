@@ -12,7 +12,20 @@
           "package_name": "com.example.freightapp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "787052587038-2h42vrt3kiaf15su92qhhro7l4i0gihp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.freightapp",
+            "certificate_hash": "9252eb389c2eb907024eb3c7f487085664246242"
+          }
+        },
+        {
+          "client_id": "787052587038-3ih786j8bucn1610k6rigp15tqf5aglh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyB5l1NZRDjuhy2PyfNpDqTioqxtanOAA6c"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "787052587038-3ih786j8bucn1610k6rigp15tqf5aglh.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "787052587038-mrbfkbetualc0cu88t9mk1eihk4if3vv.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.freightapp"
+              }
+            }
+          ]
         }
       }
     }

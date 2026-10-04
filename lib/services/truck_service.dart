@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../models/truck_model.dart';
 
 class TruckService {
@@ -12,6 +14,7 @@ class TruckService {
     required double payloadCapacity,
     required String homeBase,
     String? preferredRoutes,
+    File? imageFile,
   }) async {
     try {
       final user = _auth.currentUser;
@@ -19,6 +22,16 @@ class TruckService {
 
       DocumentReference docRef = _firestore.collection('trucks').doc();
       
+      String? photoUrl;
+      if (imageFile != null) {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('truck_photos')
+            .child('${docRef.id}.jpg');
+        await storageRef.putFile(imageFile);
+        photoUrl = await storageRef.getDownloadURL();
+      }
+
       TruckModel truck = TruckModel(
         id: docRef.id,
         ownerId: user.uid,
@@ -27,6 +40,7 @@ class TruckService {
         payloadCapacity: payloadCapacity,
         homeBase: homeBase,
         preferredRoutes: preferredRoutes,
+        photoUrl: photoUrl,
         createdAt: DateTime.now(),
       );
 

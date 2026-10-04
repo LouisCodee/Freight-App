@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/step_indicator.dart';
 import '../../services/truck_service.dart';
@@ -15,7 +17,7 @@ class CreateListingStep1Screen extends StatefulWidget {
 
 class _CreateListingStep1ScreenState extends State<CreateListingStep1Screen> {
   String? _selectedTruckType;
-  bool _hasPhotoAdded = false;
+  File? _truckImage;
   final _plateController = TextEditingController();
   final _capacityController = TextEditingController();
   final _homeBaseController = TextEditingController();
@@ -106,9 +108,14 @@ class _CreateListingStep1ScreenState extends State<CreateListingStep1Screen> {
                     _SectionLabel(label: 'Truck Photos'),
                     const SizedBox(height: 12),
                     _PhotoUploadZone(
-                      hasPhoto: _hasPhotoAdded,
-                      onTap: () =>
-                          setState(() => _hasPhotoAdded = !_hasPhotoAdded),
+                      image: _truckImage,
+                      onTap: () async {
+                        final picker = ImagePicker();
+                        final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+                        if (pickedFile != null) {
+                          setState(() => _truckImage = File(pickedFile.path));
+                        }
+                      },
                     ),
                     const SizedBox(height: 6),
                     const Text(
@@ -158,6 +165,7 @@ class _CreateListingStep1ScreenState extends State<CreateListingStep1Screen> {
                                   payloadCapacity: double.tryParse(_capacityController.text) ?? 0.0,
                                   homeBase: _homeBaseController.text.trim(),
                                   preferredRoutes: _routesController.text.trim(),
+                                  imageFile: _truckImage,
                                 );
                                 if (!context.mounted) return;
                                 setState(() => _isLoading = false);
@@ -170,7 +178,7 @@ class _CreateListingStep1ScreenState extends State<CreateListingStep1Screen> {
                                               truckType: truck.truckType,
                                               payloadCapacity: truck.payloadCapacity,
                                               homeBase: truck.homeBase,
-                                              hasPhoto: _hasPhotoAdded,
+                                              hasPhoto: _truckImage != null,
                                             )),
                                   );
                                 }
@@ -279,12 +287,13 @@ class _ListingHeader extends StatelessWidget {
 }
 
 class _PhotoUploadZone extends StatelessWidget {
-  const _PhotoUploadZone({required this.hasPhoto, required this.onTap});
-  final bool hasPhoto;
+  const _PhotoUploadZone({required this.image, required this.onTap});
+  final File? image;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final hasPhoto = image != null;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -300,6 +309,16 @@ class _PhotoUploadZone extends StatelessWidget {
             width: 1.5,
             style: BorderStyle.solid,
           ),
+          image: hasPhoto
+              ? DecorationImage(
+                  image: FileImage(image!),
+                  fit: BoxFit.cover,
+                  colorFilter: ColorFilter.mode(
+                    Colors.black.withValues(alpha: 0.2),
+                    BlendMode.darken,
+                  ),
+                )
+              : null,
         ),
         child: Center(
           child: Column(
@@ -311,7 +330,7 @@ class _PhotoUploadZone extends StatelessWidget {
                     : Icons.add_photo_alternate_rounded,
                 size: 36,
                 color: hasPhoto
-                    ? AppTheme.statusGreen
+                    ? Colors.white
                     : AppTheme.onSurfaceVariant,
               ),
               const SizedBox(height: 8),
@@ -322,7 +341,7 @@ class _PhotoUploadZone extends StatelessWidget {
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: hasPhoto
-                      ? AppTheme.statusGreen
+                      ? Colors.white
                       : AppTheme.onSurfaceVariant,
                 ),
               ),

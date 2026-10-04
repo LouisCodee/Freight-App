@@ -3,10 +3,16 @@ import '../../theme/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../models/user_model.dart';
 import '../auth/role_selection_screen.dart';
+import 'edit_profile_screen.dart';
 
-class CargoShipperProfileScreen extends StatelessWidget {
+class CargoShipperProfileScreen extends StatefulWidget {
   const CargoShipperProfileScreen({super.key});
 
+  @override
+  State<CargoShipperProfileScreen> createState() => _CargoShipperProfileScreenState();
+}
+
+class _CargoShipperProfileScreenState extends State<CargoShipperProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -19,7 +25,7 @@ class CargoShipperProfileScreen extends StatelessWidget {
               children: [
                 _ProfileHeader(),
                 const SizedBox(height: 16),
-                _AccountSettingsList(context),
+                _AccountSettingsList(context, () => setState(() {})),
                 const SizedBox(height: 32),
               ],
             ),
@@ -178,8 +184,9 @@ class _StatBadge extends StatelessWidget {
 }
 
 class _AccountSettingsList extends StatelessWidget {
-  const _AccountSettingsList(this.context);
+  const _AccountSettingsList(this.context, this.onProfileUpdated);
   final BuildContext context;
+  final VoidCallback onProfileUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -209,7 +216,17 @@ class _AccountSettingsList extends StatelessWidget {
                 _SettingsTile(
                   icon: Icons.business_outlined,
                   title: 'Company Information',
-                  onTap: () {},
+                  onTap: () async {
+                    final user = await AuthService().getCurrentUser();
+                    if (user != null && context.mounted) {
+                      final updated = await Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => EditProfileScreen(user: user)),
+                      );
+                      if (updated == true) {
+                        onProfileUpdated();
+                      }
+                    }
+                  },
                 ),
                 const Divider(height: 1, indent: 56),
                 _SettingsTile(

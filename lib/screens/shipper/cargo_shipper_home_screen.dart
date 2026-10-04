@@ -11,6 +11,8 @@ import '../../widgets/route_string.dart';
 import '../../widgets/status_chip.dart';
 import '../../services/auth_service.dart';
 import '../../models/user_model.dart';
+import 'active_shipments_list_screen.dart';
+import 'active_booking_tracker_screen.dart';
 
 class CargoShipperHomeScreen extends StatefulWidget {
   const CargoShipperHomeScreen({super.key});
@@ -34,7 +36,8 @@ class _CargoShipperHomeScreenState extends State<CargoShipperHomeScreen> {
             _ShipperHomeTab(
               onBookTruck: () => Navigator.of(context).push(
                 MaterialPageRoute(
-                    builder: (_) => const EnterCargoDetailsScreen()),
+                  builder: (_) => const EnterCargoDetailsScreen(),
+                ),
               ),
             ),
             const BookingHistoryShipperScreen(),
@@ -67,7 +70,6 @@ class _CargoShipperHomeScreenState extends State<CargoShipperHomeScreen> {
   }
 }
 
-
 String _timeAgo(DateTime dt) {
   final diff = DateTime.now().difference(dt);
   if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
@@ -85,7 +87,9 @@ class _ShipperHomeTab extends StatelessWidget {
       stream: BookingService().getShipperBookings(),
       builder: (context, snapshot) {
         final bookings = snapshot.data ?? [];
-        final activeBookings = bookings.where((b) => b.status == 'in_transit' || b.status == 'confirmed').toList();
+        final activeBookings = bookings
+            .where((b) => b.status == 'in_transit' || b.status == 'confirmed')
+            .toList();
         final recentActivity = bookings.take(5).toList();
 
         return CustomScrollView(
@@ -112,7 +116,14 @@ class _ShipperHomeTab extends StatelessWidget {
                           ),
                         ),
                         TextButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const ActiveShipmentsListScreen(),
+                              ),
+                            );
+                          },
                           child: const Text('View All'),
                         ),
                       ],
@@ -126,7 +137,9 @@ class _ShipperHomeTab extends StatelessWidget {
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           color: AppTheme.surfaceContainerLowest,
-                          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusMd,
+                          ),
                           boxShadow: AppTheme.cardShadow,
                         ),
                         child: const Center(
@@ -183,12 +196,14 @@ class _ShipperHomeTab extends StatelessWidget {
                         icon = Icons.local_shipping_rounded;
                         color = AppTheme.primaryColor;
                         title = 'Shipment In Transit';
-                        subtitle = 'Trip #${b.id.substring(0, 8).toUpperCase()} is on the way';
+                        subtitle =
+                            'Trip #${b.id.substring(0, 8).toUpperCase()} is on the way';
                       } else if (b.status == 'delivered') {
                         icon = Icons.inventory_2_rounded;
                         color = AppTheme.statusGreen;
                         title = 'Shipment Delivered';
-                        subtitle = 'Trip #${b.id.substring(0, 8).toUpperCase()} arrived';
+                        subtitle =
+                            'Trip #${b.id.substring(0, 8).toUpperCase()} arrived';
                       } else if (b.status == 'confirmed') {
                         icon = Icons.check_circle_rounded;
                         color = AppTheme.primaryColor;
@@ -198,7 +213,8 @@ class _ShipperHomeTab extends StatelessWidget {
                         icon = Icons.cancel_rounded;
                         color = AppTheme.statusRed;
                         title = 'Booking Cancelled';
-                        subtitle = 'Trip #${b.id.substring(0, 8).toUpperCase()} was cancelled';
+                        subtitle =
+                            'Trip #${b.id.substring(0, 8).toUpperCase()} was cancelled';
                       } else {
                         icon = Icons.hourglass_top_rounded;
                         color = AppTheme.statusAmber;
@@ -227,7 +243,6 @@ class _ShipperHomeTab extends StatelessWidget {
   }
 }
 
-
 class _ShipperHero extends StatelessWidget {
   const _ShipperHero({required this.onBookTruck});
   final VoidCallback onBookTruck;
@@ -246,130 +261,137 @@ class _ShipperHero extends StatelessWidget {
                 fit: BoxFit.cover,
               ),
             ),
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppTheme.primaryColor.withValues(alpha: 0.8),
-                AppTheme.primaryColor,
-              ],
-            ),
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          userName,
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 13,
-                            color: Colors.white.withValues(alpha: 0.65),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          'Welcome back 👋',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3),
-                        width: 2,
-                      ),
-                      image: const DecorationImage(
-                        image: AssetImage('assets/images/home/unsplash_3.jpg'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-              const Text(
-                'Ready to ship?',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: -0.5,
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppTheme.primaryColor.withValues(alpha: 0.8),
+                    AppTheme.primaryColor,
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Find reliable trucks for your cargo across Tanzania.',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  color: Colors.white.withValues(alpha: 0.8),
-                ),
-              ),
-              const SizedBox(height: 24),
-              GestureDetector(
-                onTap: onBookTruck,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
-                      )
-                    ],
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.search_rounded, color: AppTheme.primaryColor),
-                      SizedBox(width: 8),
-                      Text(
-                        'Find a Truck Now',
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  userName,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 13,
+                                    color: Colors.white.withValues(alpha: 0.65),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'Welcome back 👋',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.3),
+                                width: 2,
+                              ),
+                              image: const DecorationImage(
+                                image: AssetImage(
+                                  'assets/images/home/unsplash_3.jpg',
+                                ),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+                      const Text(
+                        'Ready to ship?',
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.primaryColor,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Find reliable trucks for your cargo across Tanzania.',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      GestureDetector(
+                        onTap: onBookTruck,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.radiusMd,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 16,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.search_rounded,
+                                color: AppTheme.primaryColor,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Find a Truck Now',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  ],
-);
-      }
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -381,14 +403,21 @@ class _ActiveShipmentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance.collection('users').doc(booking.carrierId).get(),
+      future: FirebaseFirestore.instance
+          .collection('users')
+          .doc(booking.carrierId)
+          .get(),
       builder: (context, snapshot) {
         final carrierName = snapshot.hasData && snapshot.data!.exists
             ? snapshot.data!['name'] ?? 'Unknown Carrier'
             : 'Loading...';
 
-        final routeLabel = booking.status == 'in_transit' ? 'In Transit' : 'Confirmed';
-        final routeStatus = booking.status == 'in_transit' ? ChipStatus.info : ChipStatus.success;
+        final routeLabel = booking.status == 'in_transit'
+            ? 'In Transit'
+            : 'Confirmed';
+        final routeStatus = booking.status == 'in_transit'
+            ? ChipStatus.info
+            : ChipStatus.success;
 
         return Container(
           padding: const EdgeInsets.all(16),
@@ -432,8 +461,11 @@ class _ActiveShipmentCard extends StatelessWidget {
                       color: AppTheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     ),
-                    child: const Icon(Icons.person_rounded,
-                        size: 16, color: AppTheme.onSurfaceVariant),
+                    child: const Icon(
+                      Icons.person_rounded,
+                      size: 16,
+                      color: AppTheme.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -448,7 +480,14 @@ class _ActiveShipmentCard extends StatelessWidget {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              ActiveBookingTrackerScreen(booking: booking),
+                        ),
+                      );
+                    },
                     child: const Text('Track'),
                   ),
                 ],
@@ -456,7 +495,7 @@ class _ActiveShipmentCard extends StatelessWidget {
             ],
           ),
         );
-      }
+      },
     );
   }
 }
@@ -500,28 +539,34 @@ class _ActivityItem extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.onSurface,
-                    )),
-                Text(subtitle,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12,
-                      color: AppTheme.onSurfaceVariant,
-                    )),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.onSurface,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    color: AppTheme.onSurfaceVariant,
+                  ),
+                ),
               ],
             ),
           ),
-          Text(time,
-              style: const TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 11,
-                color: AppTheme.outline,
-              )),
+          Text(
+            time,
+            style: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11,
+              color: AppTheme.outline,
+            ),
+          ),
         ],
       ),
     );
@@ -624,5 +669,3 @@ class _PromoBannerCarouselState extends State<_PromoBannerCarousel> {
     );
   }
 }
-
-
